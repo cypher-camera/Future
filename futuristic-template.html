@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Futuristic AR Business Card</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Unified Styles with Futuristic Theme */
+        * {
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Rajdhani', 'Orbitron', sans-serif;
+            background-color: #000;
+            color: #00ffff;
+        }
+
+        /* Futuristic Loading Animation */
+        @keyframes glitch {
+            0% { text-shadow: 0.05em 0 0 rgba(255,0,0,0.75), -0.05em -0.025em 0 rgba(0,255,0,0.75), 0.025em 0.05em 0 rgba(0,0,255,0.75); }
+            14% { text-shadow: 0.05em 0 0 rgba(255,0,0,0.75), -0.05em -0.025em 0 rgba(0,255,0,0.75), 0.025em 0.05em 0 rgba(0,0,255,0.75); }
+            15% { text-shadow: -0.05em -0.025em 0 rgba(255,0,0,0.75), 0.025em 0.025em 0 rgba(0,255,0,0.75), -0.05em -0.05em 0 rgba(0,0,255,0.75); }
+            49% { text-shadow: -0.05em -0.025em 0 rgba(255,0,0,0.75), 0.025em 0.025em 0 rgba(0,255,0,0.75), -0.05em -0.05em 0 rgba(0,0,255,0.75); }
+            50% { text-shadow: 0.025em 0.05em 0 rgba(255,0,0,0.75), 0.05em 0 0 rgba(0,255,0,0.75), 0 -0.05em 0 rgba(0,0,255,0.75); }
+            99% { text-shadow: 0.025em 0.05em 0 rgba(255,0,0,0.75), 0.05em 0 0 rgba(0,255,0,0.75), 0 -0.05em 0 rgba(0,0,255,0.75); }
+            100% { text-shadow: -0.025em 0 0 rgba(255,0,0,0.75), -0.025em -0.025em 0 rgba(0,255,0,0.75), -0.025em -0.05em 0 rgba(0,0,255,0.75); }
+        }
+
+        /* Camera Background with Overlay */
+        #camera-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 0;
+            filter: contrast(110%) brightness(90%);
+        }
+
+        /* AR Overlay Effects */
+        .ar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            background: radial-gradient(circle at center, transparent 30%, rgba(0, 30, 60, 0.3) 100%);
+        }
+
+        .ar-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 3D Card Container with Holographic Effect */
+        #card-container {
+            position: fixed;
+            width: 280px;
+            height: 180px;
+            left: 50%;
+            transform: translate(-50%, -50%) perspective(1000px);
+            transform-style: preserve-3d;
+            z-index: 5;
+            touch-action: pan-y;
+            top: 50%;
+        }
+
+        .rotating-card {
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.5),
+                0 0 40px rgba(0, 255, 255, 0.2);
+            background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(20,20,50,0.9) 100%);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .card-front {
+            transform: rotateY(0deg);
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.5));
+        }
+
+        /* Holographic Effect */
+        .card-face::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.1) 25%,
+                rgba(255, 255, 255, 0.1) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            pointer-events: none;
+            z-index: 10;
+            animation: holographic 5s linear infinite;
+        }
+
+        @keyframes holographic {
+            0% { background-position: -100% -100%; }
+            100% { background-position: 200% 200%; }
+        }
+
+        /* Profile Section with Futuristic Design */
+        .profile-card {
+            position: fixed;
+            top: 5vh;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            background: rgba(0, 20, 40, 0.7);
+            padding: 1.2rem;
+            border-radius: 20px;
+            max-width: 90%;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        .profile-image-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 1rem;
+        }
+
+        .profile-image {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            border: 2px solid #00ffff;
+            object-fit: cover;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        .profile-image-container::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top: 2px solid #00ffff;
+            border-right: 2px solid #00ffff;
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: translateX(-50%) rotate(0deg); }
+            100% { transform: translateX(-50%) rotate(360deg); }
+        }
+
+        .profile-card h2 {
+            font-size: 1.5rem;
+            margin: 0.3rem 0;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+            letter-spacing: 1px;
+        }
+
+        .profile-card p {
+            font-size: 1rem;
+            margin: 0.2rem 0;
+            color: #00ffff;
+            letter-spacing: 0.5px;
+        }
+
+        /* Social Buttons with Futuristic Design */
+        .social-container {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 15;
+        }
+
+        .social-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .social-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent
+            );
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .map {
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+        }
+
+        .twitter {
+            background: linear-gradient(45deg, #1DA1F2, #0d8ecf);
+        }
+
+        .linkedin {
+            background: linear-gradient(45deg, #0077B5, #005582);
+        }
+
+        .social-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .social-btn i {
+            font-size: 1.8rem;
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Futuristic Loading Screen */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #00ffff;
+        }
+
+        .loading-text {
+            font-size: 2rem;
+            font-weight: bold;
+            letter-spacing: 3px;
+            animation: glitch 1s infinite;
+            text-transform: uppercase;
+        }
+
+        .loading-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(0, 255, 255, 0.2);
+            margin-top: 20px;
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .loading-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: #00ffff;
+            box-shadow: 0 0 10px #00ffff;
+            animation: loading 3s ease-in-out forwards;
+        }
+
+        @keyframes loading {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        /* HUD Elements */
+        .hud-element {
+            position: fixed;
+            font-size: 0.8rem;
+            color: #00ffff;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.7);
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .hud-top-left {
+            top: 20px;
+            left: 20px;
+        }
+
+        .hud-top-right {
+            top: 20px;
+            right: 20px;
+            text-align: right;
+        }
+
+        .hud-bottom-left {
+            bottom: 20px;
+            left: 20px;
+        }
+
+        .hud-bottom-right {
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+        }
+
+        /* Scanning Effect */
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, transparent, #00ffff, transparent);
+            z-index: 3;
+            opacity: 0.7;
+            box-shadow: 0 0 10px #00ffff;
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .profile-card {
+                top: 3vh;
+                padding: 1rem;
+            }
+            
+            .profile-image-container {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .profile-image {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .profile-card h2 {
+                font-size: 1.2rem;
+            }
+            
+            .social-btn {
+                width: 55px;
+                height: 55px;
+            }
+            
+            .social-btn i {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Portrait Mode */
+        @media (orientation: portrait) and (max-width: 768px) {
+            #card-container {
+                width: 85vw;
+                height: 55vw;
+                top: 45%;
+            }
+
+            .profile-card {
+                top: 3vh;
+            }
+
+            .social-container {
+                bottom: 5vh;
+            }
+        }
+
+        /* Landscape Mode */
+        @media (orientation: landscape) {
+            #card-container {
+                width: 280px;
+                height: 180px;
+                top: 50%;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h2 data-field="name"></h2>
+<p data-field="company"></p>
+    <!-- Camera Background -->
+    <video id="camera-video" autoplay muted playsinline></video>
+    
+    <!-- AR Overlay Effects -->
+    <div class="ar-overlay"></div>
+    <div class="ar-grid"></div>
+    <div class="scan-line"></div>
+    
+    <!-- HUD Elements -->
+    <div class="hud-element hud-top-left">
+        <div id="date-time">--:--:-- | --/--/----</div>
+        <div>STATUS: <span id="status-text">INITIALIZING</span></div>
+    </div>
+    <div class="hud-element hud-top-right">
+        <div>AR MODE: ACTIVE</div>
+        <div>SIGNAL: <span id="signal-strength">●●●●○</span></div>
+    </div>
+    <div class="hud-element hud-bottom-left">
+        <div>LAT: <span id="latitude">--.---------</span></div>
+        <div>LNG: <span id="longitude">--.---------</span></div>
+    </div>
+    <div class="hud-element hud-bottom-right">
+        <div>BATTERY: <span id="battery-level">---%</span></div>
+        <div>SYSTEM: <span id="system-status">ONLINE</span></div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading">
+        <div class="loading-text">INITIALIZING SYSTEM</div>
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <!-- Profile Section -->
+    <div class="profile-card">
+        <div class="profile-image-container">
+            <img src="WhatsApp Image 2025-03-17 at 18.40.11 (1).jpeg" class="profile-image" alt="Profile">
+        </div>
+        <h2>Sanjeev Kumar</h2>
+        <p>Verdhman Pipe Industry</p>
+        <p><i class="fas fa-phone-alt"></i> +91 98XXXXXXXX</p>
+    </div>
+
+    <!-- Social Links -->
+    <div class="social-container">
+        <a href="https://www.google.com/maps/place/Verdhman+Pipe+Industry/@29.8583547,75.7833896,17z/data=!3m1!4b1!4m6!3m5!1s0x3911a7bef0fcd52b:0x29a3793398e6d308!8m2!3d29.8583547!4d75.7859645!16s%2Fg%2F11my7bqwv9?entry=ttu&
+        class="social-btn map">
+            <i class="fas fa-map-marker-alt"></i>
+        </a>
+        <a href="https://twitter.com/" class="social-btn twitter">
+            <i class="fab fa-twitter"></i>
+        </a>
+        <a href="https://linkedin.com/" class="social-btn linkedin">
+            <i class="fab fa-linkedin-in"></i>
+        </a>
+    </div>
+
+    <!-- 3D Business Card -->
+    <div id="card-container">
+        <div class="rotating-card">
+            <!-- Front of the Card -->
+            <div class="card-face card-front">
+                <img src="1.png" alt="Business Logo" class="card-image">
+            </div>
+            <!-- Back of the Card -->
+            <div class="card-face card-back">
+                <img src="https://via.placeholder.com/280x180" alt="Business Info" class="card-image">
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Interactivity -->
+    <script>
+        // Rotate card on hover
+        const cardContainer = document.getElementById('card-container');
+        const rotatingCard = document.querySelector('.rotating-card');
+
+        cardContainer.addEventListener('mousemove', (e) => {
+            const rect = cardContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const rotateX = (centerY - y) / centerY * 15;
+            const rotateY = (x - centerX) / centerX * 15;
+
+            rotatingCard.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        });
+
+        cardContainer.addEventListener('mouseleave', () => {
+            rotatingCard.style.transform = 'rotateX(0deg) rotateY(0deg)';
+        });
+
+        // Update HUD elements dynamically
+        function updateHUD() {
+            const now = new Date();
+            document.getElementById('date-time').textContent =
+                `${now.toLocaleTimeString()} | ${now.toLocaleDateString()}`;
+            
+            // Simulated data for demonstration
+            document.getElementById('status-text').textContent = 'ACTIVE';
+            document.getElementById('signal-strength').textContent = '●●●●●';
+            document.getElementById('latitude').textContent = '29.8583547';
+            document.getElementById('longitude').textContent = '75.7859645';
+            document.getElementById('battery-level').textContent = '95%';
+        }
+
+        setInterval(updateHUD, 1000);
+
+        // Hide loading screen after initialization
+        window.onload = () => {
+            setTimeout(() => {
+                document.querySelector('.loading').style.display = 'none';
+                document.getElementById('camera-video').play();
+                updateHUD();
+            }, 3000);
+        };
+    </script>
